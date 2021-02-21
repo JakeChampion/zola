@@ -1,0 +1,167 @@
+%YAML 1.2
+---
+# http://www.sublimetext.com/docs/3/syntax.html
+name: VCL
+file_extensions:
+  - vcl
+scope: source.varnish.vcl
+contexts:
+  main:
+    - include: comment
+    - include: keyword-acl
+    - include: keyword-backend
+    - include: keyword-import
+    - include: keyword-sub
+    - include: keywords-others
+  comment:
+    - match: /\*
+      push:
+        - meta_scope: comment.block.vcl
+        - match: \*/
+          pop: true
+    - match: (#).*$\n?
+      scope: comment.line.vcl
+  backend-probe:
+    - match: \.(url)\s*=
+      captures:
+        1: support.other.backend.probe.subkey.vcl
+      push:
+        - meta_scope: meta.backend.probe.subkeys.string.vcl
+        - match: ;
+          captures:
+            1: support.other.backend.probe.subkey.vcl
+          pop: true
+        - include: quoted-string
+    - match: \.(timeout|interval)\s*=
+      captures:
+        1: support.other.backend.probe.subkey.vcl
+      push:
+        - meta_scope: meta.backend.subkeys.time.vcl
+        - match: ;
+          captures:
+            1: support.other.backend.probe.subkey.vcl
+          pop: true
+        - include: time-spec
+    - match: \.(window|threshold)\s*=
+      captures:
+        1: support.other.backend.probe.subkey.vcl
+      push:
+        - meta_scope: meta.backend.subkeys.number.vcl
+        - match: ;
+          captures:
+            1: support.other.backend.probe.subkey.vcl
+          pop: true
+        - include: number-spec
+  backend-subkeys:
+    - match: \.(host|port)\s*=
+      captures:
+        1: support.other.backend.subkey.vcl
+      push:
+        - meta_scope: meta.backend.subkeys.string.vcl
+        - match: ;
+          captures:
+            1: support.other.backend.subkey.vcl
+          pop: true
+        - include: quoted-string
+    - match: '\.(probe)\s*=\s*{'
+      captures:
+        1: support.other.backend.probe.vcl
+      push:
+        - meta_scope: meta.backend.probe.vcl
+        - match: "}"
+          captures:
+            1: support.other.backend.probe.vcl
+          pop: true
+        - include: backend-probe
+    - match: \.(connect_timeout|first_byte_timeout|between_bytes_timeout)\s*=
+      captures:
+        1: support.other.backend.subkey.vcl
+      push:
+        - meta_scope: meta.backend.subkeys.time.vcl
+        - match: ;
+          captures:
+            1: support.other.backend.subkey.vcl
+          pop: true
+        - include: time-spec
+  function-invocation:
+    - match: \b(\S+)\((.*)\)
+      scope: meta.control.function
+      captures:
+        1: entity.name.function.vcl
+  keyword-acl:
+    - match: \b(acl)\b
+      scope: keyword.other.vcl.acl
+  keyword-backend:
+    - match: '\b(backend)\s+([a-zA-Z0-9_]+)\s*{'
+      captures:
+        1: keyword.control.backend.vcl
+        2: entity.name.backend.vcl
+      push:
+        - meta_scope: meta.backend.vcl
+        - match: "}"
+          captures:
+            1: keyword.control.backend.vcl
+            2: entity.name.backend.vcl
+          pop: true
+        - include: backend-subkeys
+  keyword-import:
+    - match: '\b(import)\s+([a-zA-Z0-9_]+)'
+      scope: meta.import.vcl
+      captures:
+        1: keyword.control.backend.vcl
+        2: entity.name.backend.vcl
+  keyword-sub:
+    - match: '\b(sub)\s+([a-zA-Z0-9_]+)\s*{'
+      captures:
+        1: keyword.sub.vcl.action
+        2: entity.name.function.vcl
+      push:
+        - meta_scope: meta.sub.vcl
+        - match: "}"
+          captures:
+            1: keyword.sub.vcl.action
+            2: entity.name.function.vcl
+          pop: true
+        - include: sub-body
+  keywords-others:
+    - match: \b(director|probe)\b
+      scope: keyword.other.vcl
+  number-spec:
+    - match: \d
+      scope: constant.numeric.vcl
+  quoted-string:
+    - match: '"'
+      push:
+        - meta_scope: string.quoted.double.vcl
+        - match: '"'
+          pop: true
+  sub-body:
+    - match: \b(call|hash_data|panic|ban|ban_url|remove|return|rollback|set|synthetic|unset|purge|error)\b
+      scope: keyword.control.vcl.action
+    - match: '\b(if|elseif)\s*\((.+)\)\s*(\{\s*|$)'
+      captures:
+        1: keyword.control.vcl.if
+      push:
+        - meta_scope: meta.control.vcl.if
+        - match: "}"
+          captures:
+            1: keyword.control.vcl.if
+          pop: true
+        - include: sub-body
+    - match: '\b(else)\s*(\{\s*|$)'
+      captures:
+        1: keyword.control.vcl.else
+      push:
+        - meta_scope: meta.control.vcl.else
+        - match: "}"
+          captures:
+            1: keyword.control.vcl.else
+          pop: true
+        - include: sub-body
+    - match: '\b(regsub|regsuball|true|false)\b(?![?!])'
+      scope: constant.language.vcl
+    - include: comment
+    - include: quoted-string
+  time-spec:
+    - match: \d+\s*(s|ms)
+      scope: constant.numeric.time.vcl
